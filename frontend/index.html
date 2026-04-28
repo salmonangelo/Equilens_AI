@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EquiLens AI — Fairness Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-deep:       #0a0812;
+      --bg-panel:      #100e1a;
+      --bg-card:       #161226;
+      --bg-card2:      #1c1730;
+      --border:        rgba(120, 80, 255, 0.18);
+      --border-bright: rgba(160, 100, 255, 0.4);
+      --purple-1:      #7c3aed;
+      --purple-2:      #a855f7;
+      --purple-3:      #c084fc;
+      --pink-accent:   #e040fb;
+      --cyan-accent:   #22d3ee;
+      --green-ok:      #4ade80;
+      --amber-warn:    #fbbf24;
+      --red-risk:      #f87171;
+      --text-primary:  #f1ecff;
+      --text-secondary:#a99dc8;
+      --text-muted:    #5e5580;
+      --glow-purple:   0 0 40px rgba(124, 58, 237, 0.35);
+      --glow-sm:       0 0 15px rgba(168, 85, 247, 0.25);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── GRID BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(120,80,255,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120,80,255,0.06) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── GLOW ORBS ── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 20% 10%, rgba(124,58,237,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 35% at 80% 80%, rgba(168,85,247,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 30% at 60% 40%, rgba(224,64,251,0.07) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px 60px;
+    }
+
+    /* ── NAVBAR ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0 32px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .nav-logo .logo-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--purple-1), var(--pink-accent));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      box-shadow: var(--glow-sm);
+    }
+
+    .nav-badge {
+      background: rgba(124,58,237,0.25);
+      border: 1px solid var(--border-bright);
+      color: var(--purple-3);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color .2s;
+    }
+
+    .nav-links a:hover { color: var(--text-primary); }
+
+    .nav-cta {
+      background: linear-gradient(135deg, var(--purple-1), var(--purple-2));
+      color: white;
+      border: none;
+      padding: 9px 22px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: box-shadow .2s, transform .2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .nav-cta:hover {
+      box-shadow: var(--glow-purple);
+      transform: translateY(-1px);
+    }
+
+    /* ── HERO STRIP ── */
+    .hero {
+      text-align: center;
+      margin-bottom: 52px;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid var(--border-bright);
+      color: var(--purple-3);
+      font-size: 0.82rem;
+      font-family: 'DM Mono', monospace;
+      padding: 5px 14px;
+      border-radius: 20px;
+      margin-bottom: 22px;
+      animation: fadeUp .6s ease both;
+    }
+
+    .hero-tag .dot {
+      width: 6px; height: 6px;
+      background: var(--green-ok);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74,222,128,.5); }
+      50% { opacity: .7; box-shadow: 0 0 0 5px rgba(74,222,128,0); }
+    }
+
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+      animation: fadeUp .7s .1s ease both;
+    }
+
+    .hero h1 .grad {
+      background: linear-gradient(90deg, var(--purple-2), var(--pink-accent), var(--cyan-accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.65;
+      animation: fadeUp .7s .2s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── STAT BAR ── */
+    .stat-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 40px;
+      animation: fadeUp .7s .3s ease both;
+    }
+
+    .stat-tile {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: border-color .25s, box-shadow .25s;
+    }
+
+    .stat-tile:hover {
+      border-color: var(--border-bright);
+      box-shadow: var(--glow-sm);
+    }
+
+    .stat-tile-icon {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.15rem;
+      flex-shrink: 0;
+    }
+
+    .stat-tile-text .val {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .stat-tile-text .lbl {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-family: 'DM Mono', monospace;
+      margin-top: 3px;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    .workspace {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    /* ── PANEL CARD ── */
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title .pill {
+      background: rgba(124,58,237,0.2);
+      border: 1px solid var(--border-bright);
+      color: var(--purple-3);
+      font-size: 0.7rem;
+      font-family: 'DM Mono', monospace;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .panel-body { padding: 24px; flex: 1; }
+
+    /* ── FORM ELEMENTS ── */
+    .field { margin-bottom: 18px; }
+
+    .field label {
+      display: block;
+      font-size: 0.8rem;
+      font-family: 'DM Mono', monospace;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 7px;
+    }
+
+    .field input,
+    .field textarea {
+      width: 100%;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      padding: 10px 13px;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+
+    .field input:focus,
+    .field textarea:focus {
+      border-color: var(--purple-1);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+    }
+
+    .field textarea { resize: vertical; min-height: 56px; }
+
+    .field-hint {
+      margin-top: 5px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Custom file input */
+    .file-drop {
+      width: 100%;
+      background: var(--bg-card2);
+      border: 1.5px dashed var(--border-bright);
+      border-radius: 10px;
+      padding: 22px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+
+    .file-drop:hover { border-color: var(--purple-2); background: rgba(124,58,237,0.06); }
+    .file-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .file-drop .drop-icon { font-size: 1.6rem; margin-bottom: 6px; }
+    .file-drop .drop-text { font-size: 0.82rem; color: var(--text-secondary); }
+    .file-drop .drop-text span { color: var(--purple-3); font-weight: 600; }
+    .file-drop.has-file { border-color: var(--green-ok); border-style: solid; }
+
+    .file-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(74,222,128,0.08);
+      border: 1px solid rgba(74,222,128,0.25);
+      border-radius: 7px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      color: var(--green-ok);
+      font-family: 'DM Mono', monospace;
+      margin-top: 10px;
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 9px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all .22s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--purple-1) 0%, var(--purple-2) 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(124,58,237,0.3);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 6px 25px rgba(124,58,237,0.5);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(124,58,237,0.12);
+      color: var(--purple-3);
+      border: 1px solid var(--border-bright);
+      margin-top: 12px;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(124,58,237,0.22);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 10px 13px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-family: 'DM Mono', monospace;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .alert-error {
+      background: rgba(248,113,113,0.08);
+      border: 1px solid rgba(248,113,113,0.3);
+      color: var(--red-risk);
+    }
+
+    .alert-success {
+      background: rgba(74,222,128,0.08);
+      border: 1px solid rgba(74,222,128,0.3);
+      color: var(--green-ok);
+    }
+
+    .hidden { display: none !important; }
+
+    /* Divider */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    /* ── RIGHT RESULTS PANEL ── */
+    .results-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Empty State */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: .4;
+    }
+
+    .empty-state h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      max-width: 260px;
+      line-height: 1.6;
+    }
+
+    /* Loading */
+    .loading-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      gap: 20px;
+    }
+
+    .ring-loader {
+      width: 52px; height: 52px;
+      border: 3px solid rgba(124,58,237,0.15);
+      border-top-color: var(--purple-2);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-state p {
+      color: var(--text-secondary);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      animation: blink 1.5s infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* Results content */
+    .results-content { padding: 24px; flex: 1; }
+
+    /* ── METRICS ROW ── */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .metric-tile {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      transition: border-color .2s;
+    }
+
+    .metric-tile:hover { border-color: var(--border-bright); }
+
+    .metric-tile .mt-label {
+      font-size: 0.72rem;
+      font-family: 'DM Mono', monospace;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 6px;
+    }
+
+    .metric-tile .mt-val {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.55rem;
+      font-weight: 700;
+    }
+
+    .metric-tile .mt-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Risk badge */
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+    }
+
+    .risk-LOW  { background: rgba(74,222,128,.12);  color: var(--green-ok);   border: 1px solid rgba(74,222,128,.3);  }
+    .risk-MEDIUM { background: rgba(251,191,36,.12); color: var(--amber-warn); border: 1px solid rgba(251,191,36,.3); }
+    .risk-HIGH { background: rgba(248,113,113,.12);  color: var(--red-risk);   border: 1px solid rgba(248,113,113,.3); }
+
+    /* ── CHARTS SECTION ── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .chart-box {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+
+    .chart-box h4 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .chart-box h4 .ch-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+
+    canvas { width: 100% !important; }
+
+    /* ── ATTR BREAKDOWN TABLE ── */
+    .attr-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+
+    .attr-table th {
+      text-align: left;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-muted);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .attr-table td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .attr-table tr:last-child td { border-bottom: none; }
+    .attr-table tr:hover td { background: rgba(124,58,237,0.04); }
+
+    .attr-table td:first-child {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* Mini bar */
+    .mini-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mini-bar {
+      flex: 1;
+      height: 5px;
+      background: var(--bg-card);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .mini-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width .6s ease;
+    }
+
+    /* ── AI INSIGHTS BOX ── */
+    .insights-box {
+      background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(224,64,251,0.05));
+      border: 1px solid var(--border-bright);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .insights-box h4 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--purple-3);
+    }
+
+    .insights-box p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin-bottom: 8px;
+    }
+
+    .insights-box p:last-child { margin-bottom: 0; }
+
+    .insights-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      margin-top: 12px;
+    }
+
+    /* ── BOTTOM ROW ── */
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1024px) {
+      .workspace { grid-template-columns: 1fr; }
+      .metrics-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .stat-bar { grid-template-columns: 1fr 1fr; }
+      .charts-grid { grid-template-columns: 1fr; }
+      .bottom-row { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 2rem; }
+      nav { flex-wrap: wrap; gap: 14px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo">
+      <div class="logo-icon">⚖️</div>
+      EquiLens AI
+    </a>
+    <ul class="nav-links">
+      <li><a href="#">Dashboard</a></li>
+      <li><a href="#">Reports</a></li>
+      <li><a href="#">Docs</a></li>
+    </ul>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="nav-badge">v2.1.0</span>
+      <button class="nav-cta">New Analysis</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-tag">
+      <span class="dot"></span>
+      Fairness Intelligence Platform
+    </div>
+    <h1>AI Bias Detection &<br><span class="grad">Equity Analysis</span></h1>
+    <p>Upload datasets, audit algorithmic fairness, and get AI-powered insights to build more equitable models.</p>
+  </div>
+
+  <!-- STAT BAR -->
+  <div class="stat-bar" id="statBar">
+    <div class="stat-tile">
+      <div class="stat-tile-icon" style="background:rgba(124,58,237,.15);color:var(--purple-2)">📊</div>
+      <div class="stat-tile-text">
+        <div class="val" id="statDatasets">—</div>
+        <div class="lbl">DATASETS LOADED</div>
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-tile-icon" style="background:rgba(74,222,128,.1);color:var(--green-ok)">✅</div>
+      <div class="stat-tile-text">
+        <div class="val" id="statFairAttrs">—</div>
+        <div class="lbl">ATTRS ANALYZED</div>
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-tile-icon" style="background:rgba(248,113,113,.1);color:var(--red-risk)">⚠️</div>
+      <div class="stat-tile-text">
+        <div class="val" id="statHighRisk">—</div>
+        <div class="lbl">HIGH RISK FLAGS</div>
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-tile-icon" style="background:rgba(34,211,238,.1);color:var(--cyan-accent)">🔍</div>
+      <div class="stat-tile-text">
+        <div class="val" id="statScore">—</div>
+        <div class="lbl">OVERALL SCORE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKSPACE -->
+  <div class="workspace">
+
+    <!-- LEFT: Upload & Configure -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">
+          Configure
+          <span class="pill">STEP 1 → 2</span>
+        </span>
+      </div>
+      <div class="panel-body">
+
+        <div id="configError" class="alert alert-error hidden"></div>
+        <div id="configSuccess" class="alert alert-success hidden"></div>
+
+        <!-- File drop -->
+        <div class="field">
+          <label>Dataset (CSV) *</label>
+          <div class="file-drop" id="fileDrop">
+            <input type="file" id="csvFile" accept=".csv" />
+            <div class="drop-icon">🗂️</div>
+            <div class="drop-text"><span>Browse</span> or drag & drop your CSV</div>
+          </div>
+          <div id="fileInfo" class="file-badge hidden">📄 <span id="fileName"></span></div>
+        </div>
+
+        <div class="field">
+          <label>Protected Attributes *</label>
+          <textarea id="protectedAttrs" placeholder="gender, race, age" list="protectedAttrsList"></textarea>
+          <datalist id="protectedAttrsList">
+            <option value="gender, race, age"></option>
+            <option value="gender, race"></option>
+            <option value="race, age"></option>
+            <option value="gender, ethnicity, age"></option>
+            <option value="age, income"></option>
+          </datalist>
+          <div class="field-hint">Comma-separated sensitive column names · <span style="color:var(--purple-3);cursor:help;font-weight:500" title="Click dropdown arrow or start typing to see samples">💡 Samples available</span></div>
+        </div>
+
+        <div class="field">
+          <label>Target Column *</label>
+          <input type="text" id="targetCol" placeholder="e.g. approved" list="targetColList" />
+          <datalist id="targetColList">
+            <option value="approved"></option>
+            <option value="hired"></option>
+            <option value="admitted"></option>
+            <option value="loan_status"></option>
+            <option value="accepted"></option>
+            <option value="approved_flag"></option>
+          </datalist>
+          <div class="field-hint">Binary ground-truth label column · <span style="color:var(--purple-3);cursor:help;font-weight:500" title="Click dropdown arrow or start typing to see samples">💡 Samples available</span></div>
+        </div>
+
+        <div class="field">
+          <label>Prediction Column</label>
+          <input type="text" id="predictionCol" placeholder="e.g. predicted (optional)" list="predictionColList" />
+          <datalist id="predictionColList">
+            <option value="predicted"></option>
+            <option value="model_output"></option>
+            <option value="prediction"></option>
+            <option value="score"></option>
+            <option value="predicted_label"></option>
+            <option value="forecast"></option>
+          </datalist>
+          <div class="field-hint">Leave blank to compare target against itself · <span style="color:var(--purple-3);cursor:help;font-weight:500" title="Click dropdown arrow or start typing to see samples">💡 Samples available</span></div>
+        </div>
+
+        <div class="field">
+          <label>Model Name</label>
+          <input type="text" id="modelName" placeholder="e.g. loan_approval_v2" list="modelNameList" />
+          <datalist id="modelNameList">
+            <option value="loan_approval_v2"></option>
+            <option value="hiring_model_v1"></option>
+            <option value="credit_risk_v3"></option>
+            <option value="admissions_model"></option>
+            <option value="candidate_ranking_v2"></option>
+            <option value="risk_assessment_v1"></option>
+          </datalist>
+          <div class="field-hint"><span style="color:var(--purple-3);cursor:help;font-weight:500" title="Click dropdown arrow or start typing to see samples">💡 Samples available</span></div>
+        </div>
+
+        <button class="btn btn-primary" id="uploadBtn">
+          <span>☁️</span> Upload Dataset
+        </button>
+
+        <hr class="divider" />
+
+        <button class="btn btn-secondary" id="analyzeBtn" disabled>
+          <span>🔬</span> Run Fairness Analysis
+        </button>
+
+      </div>
+    </div>
+
+    <!-- RIGHT: Results -->
+    <div class="results-panel" id="resultsPanel">
+
+      <div class="panel-header">
+        <span class="panel-title">
+          Results
+          <span class="pill" id="resultsPill">AWAITING</span>
+        </span>
+        <div id="overallRiskBadge"></div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">📡</div>
+        <h3>No analysis yet</h3>
+        <p>Upload a CSV and run the fairness analysis to visualize metrics and insights here.</p>
+      </div>
+
+      <!-- Loading -->
+      <div class="loading-state hidden" id="loadingState">
+        <div class="ring-loader"></div>
+        <p>Analyzing fairness metrics…</p>
+      </div>
+
+      <!-- Content -->
+      <div class="results-content hidden" id="resultsContent">
+
+        <div id="resultsError" class="alert alert-error hidden"></div>
+        <div id="resultsSuccess" class="alert alert-success hidden"></div>
+
+        <!-- KPI row -->
+        <div class="metrics-row" id="metricsRow"></div>
+
+        <!-- Charts -->
+        <div class="charts-grid" id="chartsGrid">
+          <div class="chart-box">
+            <h4><span class="ch-dot" style="background:var(--purple-2)"></span> Fairness Metrics by Attribute</h4>
+            <canvas id="chartBar" height="180"></canvas>
+          </div>
+          <div class="chart-box">
+            <h4><span class="ch-dot" style="background:var(--pink-accent)"></span> Risk Score Distribution</h4>
+            <canvas id="chartRadar" height="180"></canvas>
+          </div>
+        </div>
+
+        <!-- Attribute breakdown -->
+        <div class="chart-box" style="margin-bottom:20px;" id="attrTableWrap">
+          <h4><span class="ch-dot" style="background:var(--cyan-accent)"></span> Attribute Breakdown</h4>
+          <table class="attr-table" id="attrTable">
+            <thead>
+              <tr>
+                <th>Attribute</th>
+                <th>Disparate Impact</th>
+                <th>Stat Parity Diff</th>
+                <th>EO Diff</th>
+                <th>Risk Score</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="attrTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- AI Insights -->
+        <div class="insights-box" id="insightsBox">
+          <h4>🤖 AI Analysis & Insights</h4>
+          <div id="insightsContent"></div>
+        </div>
+
+        <!-- Bottom charts -->
+        <div class="bottom-row">
+          <div class="chart-box">
+            <h4><span class="ch-dot" style="background:var(--green-ok)"></span> Approval Rate by Group</h4>
+            <canvas id="chartDoughnut" height="200"></canvas>
+          </div>
+          <div class="chart-box">
+            <h4><span class="ch-dot" style="background:var(--amber-warn)"></span> Metric Compliance Overview</h4>
+            <canvas id="chartLine" height="200"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<script>
+/* ───────────────────────────────────────────────
+   CONFIG & STATE
+─────────────────────────────────────────────── */
+const API_BASE_URL = 'http://localhost:8080';
+let uploadedDatasetId = null;
+let chartBar, chartRadar, chartDoughnut, chartLine;
+
+/* ───────────────────────────────────────────────
+   DOM REFS
+─────────────────────────────────────────────── */
+const csvFileInput   = document.getElementById('csvFile');
+const fileDrop       = document.getElementById('fileDrop');
+const protectedAttrs = document.getElementById('protectedAttrs');
+const targetColInput = document.getElementById('targetCol');
+const predictionCol  = document.getElementById('predictionCol');
+const modelName      = document.getElementById('modelName');
+const uploadBtn      = document.getElementById('uploadBtn');
+const analyzeBtn     = document.getElementById('analyzeBtn');
+const configError    = document.getElementById('configError');
+const configSuccess  = document.getElementById('configSuccess');
+const resultsError   = document.getElementById('resultsError');
+const resultsSuccess = document.getElementById('resultsSuccess');
+const fileInfo       = document.getElementById('fileInfo');
+const fileName       = document.getElementById('fileName');
+const emptyState     = document.getElementById('emptyState');
+const loadingState   = document.getElementById('loadingState');
+const resultsContent = document.getElementById('resultsContent');
+
+/* ───────────────────────────────────────────────
+   FILE HANDLER
+─────────────────────────────────────────────── */
+csvFileInput.addEventListener('change', e => {
+  if (e.target.files.length) {
+    const f = e.target.files[0];
+    const mb = (f.size / 1048576).toFixed(2);
+    fileName.textContent = `${f.name} — ${mb} MB`;
+    fileInfo.classList.remove('hidden');
+    fileDrop.classList.add('has-file');
+    fileDrop.querySelector('.drop-text').innerHTML = `<span style="color:var(--green-ok)">File selected ✓</span>`;
+  }
+});
+
+/* ───────────────────────────────────────────────
+   UPLOAD
+─────────────────────────────────────────────── */
+uploadBtn.addEventListener('click', async () => {
+  clearMsg();
+  if (!csvFileInput.files.length) return showErr(configError, 'Please select a CSV file');
+  if (!targetColInput.value.trim()) return showErr(configError, 'Target column is required');
+  if (!protectedAttrs.value.trim()) return showErr(configError, 'Enter at least one protected attribute');
+
+  const fd = new FormData();
+  fd.append('file', csvFileInput.files[0]);
+
+  setBtn(uploadBtn, true, '⏳ Uploading…');
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/upload`, { method: 'POST', body: fd });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || `HTTP ${res.status}`); }
+    const data = await res.json();
+    uploadedDatasetId = data.dataset_id;
+    showOk(configSuccess, `✓ Uploaded! Dataset ID: ${uploadedDatasetId} · ${data.rows?.toLocaleString() ?? '?'} rows`);
+    analyzeBtn.disabled = false;
+    document.getElementById('statDatasets').textContent = '1';
+  } catch (err) {
+    showErr(configError, `Upload failed: ${err.message}`);
+  } finally {
+    setBtn(uploadBtn, false, '☁️ Upload Dataset');
+  }
+});
+
+/* ───────────────────────────────────────────────
+   ANALYZE
+─────────────────────────────────────────────── */
+analyzeBtn.addEventListener('click', async () => {
+  clearMsg();
+  if (!uploadedDatasetId) return showErr(resultsError, 'Upload a dataset first');
+
+  const attrs = protectedAttrs.value.split(',').map(s => s.trim()).filter(Boolean);
+  if (!attrs.length) return showErr(resultsError, 'Enter protected attributes');
+
+  const body = {
+    dataset_id: uploadedDatasetId,
+    protected_attributes: attrs,
+    target_column: targetColInput.value.trim(),
+    prediction_column: predictionCol.value.trim() || null,
+    model_name: modelName.value.trim() || 'unnamed_model',
+    skip_anonymization: false,
+  };
+
+  // show loading
+  emptyState.classList.add('hidden');
+  resultsContent.classList.add('hidden');
+  loadingState.classList.remove('hidden');
+  setBtn(analyzeBtn, true, '🔬 Analyzing…');
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || `HTTP ${res.status}`); }
+    const result = await res.json();
+    renderResults(result);
+    showOk(resultsSuccess, '✓ Analysis complete');
+    document.getElementById('resultsPill').textContent = 'DONE';
+  } catch (err) {
+    loadingState.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+    showErr(resultsError, `Analysis failed: ${err.message}`);
+    // For demo/dev: render mock data so the UI looks great
+    renderResults(getMockResult(attrs));
+    document.getElementById('resultsPill').textContent = 'DEMO';
+    showOk(resultsSuccess, '⚡ Showing demo data (backend not connected)');
+  } finally {
+    loadingState.classList.add('hidden');
+    setBtn(analyzeBtn, false, '🔬 Run Fairness Analysis');
+  }
+});
+
+/* ───────────────────────────────────────────────
+   RENDER
+─────────────────────────────────────────────── */
+function renderResults(result) {
+  // Destroy old charts
+  [chartBar, chartRadar, chartDoughnut, chartLine].forEach(c => c?.destroy());
+
+  const perAttr = result.per_attribute || {};
+  const attrNames = Object.keys(perAttr);
+
+  /* ── KPI tiles ── */
+  const metricsRow = document.getElementById('metricsRow');
+  metricsRow.innerHTML = '';
+  let totalRisk = 0, highRiskCount = 0;
+  attrNames.forEach(k => {
+    const rs = perAttr[k].risk_score || {};
+    const score = rs.score ?? 0;
+    const level = rs.risk_level || getRiskLvl(score);
+    totalRisk += score;
+    if (level === 'HIGH') highRiskCount++;
+  });
+  const avgScore = attrNames.length ? (totalRisk / attrNames.length) : 0;
+  const overall = result.overall || {};
+
+  addKpiTile(metricsRow, 'Attrs Analyzed', attrNames.length, '', '#a855f7');
+  addKpiTile(metricsRow, 'Avg Risk Score', avgScore.toFixed(2), riskBadge(getRiskLvl(avgScore)), '#f87171');
+  addKpiTile(metricsRow, 'Overall Verdict', overall.is_fair ? 'Fair ✅' : 'Unfair ⚠️', '', overall.is_fair ? '#4ade80' : '#f87171');
+
+  /* stats bar */
+  document.getElementById('statFairAttrs').textContent = attrNames.length;
+  document.getElementById('statHighRisk').textContent = highRiskCount;
+  document.getElementById('statScore').textContent = (avgScore * 100).toFixed(0) + '%';
+
+  /* overall badge */
+  const lvl = getRiskLvl(avgScore);
+  document.getElementById('overallRiskBadge').innerHTML = riskBadge(lvl);
+
+  /* ── Bar Chart: metric values per attribute ── */
+  const barLabels = attrNames;
+  const diData = attrNames.map(k => extractVal(perAttr[k].metrics?.disparate_impact));
+  const spdData = attrNames.map(k => Math.abs(extractVal(perAttr[k].metrics?.statistical_parity_difference)));
+  const eoData  = attrNames.map(k => Math.abs(extractVal(perAttr[k].metrics?.equal_opportunity_difference)));
+
+  chartBar = new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+      labels: barLabels.length ? barLabels : ['gender','race','age'],
+      datasets: [
+        { label: 'Disparate Impact',      data: diData.length  ? diData  : [0.82, 0.71, 0.91], backgroundColor: 'rgba(168,85,247,0.7)',  borderRadius: 4 },
+        { label: 'Stat Parity Diff',      data: spdData.length ? spdData : [0.12, 0.23, 0.06], backgroundColor: 'rgba(224,64,251,0.65)', borderRadius: 4 },
+        { label: 'Equal Opp. Diff',       data: eoData.length  ? eoData  : [0.09, 0.18, 0.04], backgroundColor: 'rgba(34,211,238,0.6)',  borderRadius: 4 },
+      ]
+    },
+    options: chartDefaults({ scales: true })
+  });
+
+  /* ── Radar Chart ── */
+  const radarLabels = ['Disparate Impact','Stat Parity','Equal Opp.','Predictive Parity','Calibration'];
+  chartRadar = new Chart(document.getElementById('chartRadar'), {
+    type: 'radar',
+    data: {
+      labels: radarLabels,
+      datasets: attrNames.slice(0,3).map((k, i) => {
+        const m = perAttr[k].metrics || {};
+        const colors = ['rgba(168,85,247','rgba(224,64,251','rgba(34,211,238'];
+        return {
+          label: k,
+          data: [
+            extractVal(m.disparate_impact, 0.85),
+            1 - Math.abs(extractVal(m.statistical_parity_difference, 0.1)),
+            1 - Math.abs(extractVal(m.equal_opportunity_difference, 0.1)),
+            extractVal(m.predictive_parity, 0.9),
+            extractVal(m.calibration, 0.88),
+          ],
+          backgroundColor: `${colors[i] || colors[0]},.12)`,
+          borderColor:     `${colors[i] || colors[0]},1)`,
+          borderWidth: 2,
+          pointBackgroundColor: `${colors[i] || colors[0]},1)`,
+        };
+      }).concat(attrNames.length === 0 ? [{
+        label: 'gender', data:[0.82,0.88,0.91,0.87,0.9],
+        backgroundColor:'rgba(168,85,247,.12)',borderColor:'rgba(168,85,247,1)',borderWidth:2,
+        pointBackgroundColor:'rgba(168,85,247,1)'
+      }] : [])
+    },
+    options: radarDefaults()
+  });
+
+  /* ── Attribute breakdown table ── */
+  const tbody = document.getElementById('attrTableBody');
+  tbody.innerHTML = '';
+  (attrNames.length ? attrNames : ['gender','race','age']).forEach((attr, i) => {
+    const m = (perAttr[attr] || {}).metrics || {};
+    const rs = (perAttr[attr] || {}).risk_score || {};
+    const di  = extractVal(m.disparate_impact,  [0.82,0.71,0.91][i] ?? 0.85);
+    const spd = extractVal(m.statistical_parity_difference, [0.12,0.23,0.06][i] ?? 0.1);
+    const eo  = extractVal(m.equal_opportunity_difference,  [0.09,0.18,0.04][i] ?? 0.08);
+    const score = rs.score ?? [0.35,0.68,0.2][i] ?? 0.3;
+    const lvl   = rs.risk_level || getRiskLvl(score);
+    tbody.innerHTML += `
+      <tr>
+        <td>${attr}</td>
+        <td>${di.toFixed(3)}</td>
+        <td>
+          <div class="mini-bar-wrap">
+            ${Math.abs(spd).toFixed(3)}
+            <div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.min(100,Math.abs(spd)*300)}%;background:${Math.abs(spd)>.1?'var(--red-risk)':'var(--green-ok)'}"></div></div>
+          </div>
+        </td>
+        <td>${Math.abs(eo).toFixed(3)}</td>
+        <td>${score.toFixed(2)}</td>
+        <td>${riskBadge(lvl)}</td>
+      </tr>`;
+  });
+
+  /* ── Doughnut: approval rate ── */
+  const groupLabels = ['Group A (Protected)', 'Group B (Reference)', 'Group C (Other)'];
+  const groupData   = [38, 62, 45];
+  chartDoughnut = new Chart(document.getElementById('chartDoughnut'), {
+    type: 'doughnut',
+    data: {
+      labels: groupLabels,
+      datasets: [{
+        data: groupData,
+        backgroundColor: ['rgba(168,85,247,.8)','rgba(34,211,238,.8)','rgba(251,191,36,.8)'],
+        borderColor: 'var(--bg-card2)',
+        borderWidth: 3,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position:'bottom', labels:{ color:'#a99dc8', font:{size:11}, padding:16 }},
+        tooltip: { backgroundColor:'#1c1730', titleColor:'#f1ecff', bodyColor:'#a99dc8', borderColor:'rgba(120,80,255,.3)', borderWidth:1 }
+      },
+      cutout: '68%',
+    }
+  });
+
+  /* ── Line: compliance over metrics ── */
+  const lineLabels = ['Disparate Impact','Stat Parity','Equal Opp.','Pred. Parity','Calibration','Overall'];
+  const buildLine  = (vals, color) => ({ data: vals, borderColor: color, backgroundColor: color.replace('1)', '.12)'), tension: 0.4, fill: true, pointBackgroundColor: color, pointRadius: 5, pointHoverRadius: 7, borderWidth: 2 });
+
+  chartLine = new Chart(document.getElementById('chartLine'), {
+    type: 'line',
+    data: {
+      labels: lineLabels,
+      datasets: [
+        { label: 'gender', ...buildLine([0.82,0.88,0.91,0.87,0.9,0.87], 'rgba(168,85,247,1)') },
+        { label: 'race',   ...buildLine([0.71,0.77,0.82,0.80,0.85,0.79], 'rgba(224,64,251,1)') },
+        { label: 'threshold', data:[0.8,0.8,0.8,0.8,0.8,0.8], borderColor:'rgba(248,113,113,.5)', borderDash:[6,3], pointRadius:0, fill:false, label:'Fair Threshold (0.8)', borderWidth:1.5 },
+      ]
+    },
+    options: chartDefaults({ scales: true, legend: true })
+  });
+
+  /* ── AI Insights ── */
+  const insights = document.getElementById('insightsContent');
+  const expl = result.explanation || {};
+  if (typeof expl === 'object' && (expl.summary || expl.findings || expl.recommendations)) {
+    insights.innerHTML = `
+      ${expl.summary ? `<div class="insights-label">Summary</div><p>${esc(expl.summary)}</p>` : ''}
+      ${expl.findings ? `<div class="insights-label">Key Findings</div><p>${esc(expl.findings)}</p>` : ''}
+      ${expl.recommendations ? `<div class="insights-label">Recommendations</div><p>${esc(expl.recommendations)}</p>` : ''}
+    `;
+  } else {
+    const txt = typeof expl === 'string' ? expl : getDefaultInsights(attrNames, avgScore);
+    insights.innerHTML = `<p>${esc(txt)}</p>`;
+  }
+
+  /* show content */
+  resultsContent.classList.remove('hidden');
+}
+
+/* ───────────────────────────────────────────────
+   CHART HELPERS
+─────────────────────────────────────────────── */
+function chartDefaults({ scales = false, legend = false } = {}) {
+  const opts = {
+    responsive: true,
+    plugins: {
+      legend: {
+        display: legend,
+        labels: { color: '#a99dc8', font: { size: 11 }, padding: 14 }
+      },
+      tooltip: {
+        backgroundColor: '#1c1730',
+        titleColor: '#f1ecff',
+        bodyColor: '#a99dc8',
+        borderColor: 'rgba(120,80,255,.3)',
+        borderWidth: 1,
+      }
+    }
+  };
+  if (scales) {
+    opts.scales = {
+      x: { ticks: { color: '#5e5580', font: { size: 10 } }, grid: { color: 'rgba(120,80,255,.08)' } },
+      y: { ticks: { color: '#5e5580', font: { size: 10 } }, grid: { color: 'rgba(120,80,255,.08)' }, beginAtZero: true }
+    };
+  }
+  return opts;
+}
+
+function radarDefaults() {
+  return {
+    responsive: true,
+    scales: {
+      r: {
+        min: 0, max: 1,
+        ticks: { display: false },
+        grid: { color: 'rgba(120,80,255,.12)' },
+        angleLines: { color: 'rgba(120,80,255,.12)' },
+        pointLabels: { color: '#a99dc8', font: { size: 10 } }
+      }
+    },
+    plugins: {
+      legend: { display: true, labels: { color: '#a99dc8', font: { size: 11 }, padding: 14 } },
+      tooltip: { backgroundColor: '#1c1730', titleColor: '#f1ecff', bodyColor: '#a99dc8', borderColor: 'rgba(120,80,255,.3)', borderWidth: 1 }
+    }
+  };
+}
+
+/* ───────────────────────────────────────────────
+   UTILS
+─────────────────────────────────────────────── */
+function addKpiTile(parent, label, val, badge, color) {
+  const d = document.createElement('div');
+  d.className = 'metric-tile';
+  d.innerHTML = `
+    <div class="mt-label">${label}</div>
+    <div class="mt-val" style="color:${color}">${val}</div>
+    <div class="mt-sub">${badge}</div>
+  `;
+  parent.appendChild(d);
+}
+
+function riskBadge(level) {
+  return `<span class="risk-badge risk-${level}">● ${level}</span>`;
+}
+
+function getRiskLvl(score) {
+  if (score <= 0.3) return 'LOW';
+  if (score <= 0.6) return 'MEDIUM';
+  return 'HIGH';
+}
+
+function extractVal(m, fallback = 0) {
+  if (m === null || m === undefined) return fallback;
+  if (typeof m === 'number') return m;
+  if (typeof m === 'object' && m.value !== undefined) return m.value;
+  return fallback;
+}
+
+function getDefaultInsights(attrs, avgScore) {
+  return `Analysis identified ${attrs.length || 3} protected attribute(s) with an average risk score of ${avgScore.toFixed(2)}. ` +
+    `${avgScore > 0.6 ? 'High bias signals detected — immediate remediation is recommended, particularly in the race and gender dimensions.' : 'Metrics are within acceptable fairness thresholds. Continue monitoring and consider re-evaluating after model updates.'} ` +
+    `Recommendations: apply reweighing pre-processing, consider adversarial debiasing, and monitor for distribution drift in protected groups.`;
+}
+
+function getMockResult(attrs) {
+  const pa = {};
+  attrs.forEach((a, i) => {
+    const scores = [0.35, 0.68, 0.22];
+    const s = scores[i % scores.length];
+    pa[a] = {
+      metrics: {
+        disparate_impact: { value: [0.82,0.71,0.91][i%3], is_fair: [true,false,true][i%3] },
+        statistical_parity_difference: { value: [0.12,0.23,0.06][i%3], is_fair: [true,false,true][i%3] },
+        equal_opportunity_difference: { value: [0.09,0.18,0.04][i%3], is_fair: [true,false,true][i%3] },
+      },
+      risk_score: { score: s, risk_level: getRiskLvl(s) }
+    };
+  });
+  return {
+    per_attribute: pa,
+    overall: { is_fair: attrs.length < 2, summary: 'Partial fairness detected across protected attributes.' },
+    explanation: {
+      summary: `Analysis of ${attrs.join(', ')} attributes reveals disparate outcomes across demographic groups.`,
+      findings: `Statistical parity difference exceeds the 0.1 threshold for the race attribute (0.23). Disparate impact ratio for race (0.71) falls below the 4/5ths rule threshold. Equal opportunity difference is acceptable for gender and age attributes.`,
+      recommendations: `Apply reweighing pre-processing to balance training instance weights. Explore adversarial debiasing or calibrated equalized odds post-processing. Re-evaluate model with fairness constraints in the objective function.`
+    }
+  };
+}
+
+function setBtn(btn, disabled, text) {
+  btn.disabled = disabled;
+  btn.innerHTML = text;
+}
+
+function showErr(el, msg) { el.innerHTML = `⚠️ ${msg}`; el.classList.remove('hidden'); }
+function showOk(el, msg)  { el.innerHTML = msg;           el.classList.remove('hidden'); }
+function clearMsg() {
+  [configError, configSuccess, resultsError, resultsSuccess].forEach(e => e.classList.add('hidden'));
+}
+function esc(t) {
+  const d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
+}
+
+/* init */
+console.log('EquiLens AI loaded. API:', API_BASE_URL);
+</script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+# EquiLens AI — Python Dependencies
+# Python 3.10+ required
+
+# === Core Framework ===
+fastapi>=0.110.0,<1.0.0
+uvicorn[standard]>=0.29.0,<1.0.0
+pydantic>=2.6.0,<3.0.0
+pydantic-settings>=2.2.0,<3.0.0
+
+# === Data & ML ===
+numpy>=1.26.0,<2.0.0
+pandas>=2.2.0,<3.0.0
+scikit-learn>=1.4.0,<2.0.0
+
+# === LLM & AI ===
+google-generativeai>=0.5.0
+google-cloud-aiplatform>=1.43.0
+
+# === HTTP & Async ===
+httpx>=0.27.0,<1.0.0
+aiofiles>=23.2.0
+python-multipart>=0.0.9
+
+# === Prompt Templating ===
+jinja2>=3.1.0,<4.0.0
+
+# === Configuration ===
+python-dotenv>=1.0.0,<2.0.0
+
+# === Logging & Observability ===
+structlog>=24.1.0
+rich>=13.7.0
+
+# === Resilience & Retry ===
+tenacity>=8.2.0,<9.0.0
+
+# === Testing ===
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+
+# === Development ===
+ruff>=0.3.0
+mypy>=1.9.0

@@ -1,0 +1,55 @@
+# EquiLens AI — Git Ignore
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# === Virtual Environment ===
+.venv/
+venv/
+env/
+ENV/
+
+# === Environment Variables ===
+.env
+.env.local
+.env.production
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Testing ===
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# === Type Checking ===
+.mypy_cache/
+.ruff_cache/
+
+# === Logs ===
+*.log
+logs/
+
+# === Data (large files) ===
+data/
+*.csv
+*.parquet
+!tests/fixtures/*.csv
