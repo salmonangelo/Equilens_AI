@@ -10,7 +10,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Cloud Run uses PORT env var
-ENV PORT=8080
+ENV PORT=8000
+ENV BACKEND_HOST=0.0.0.0
+ENV BACKEND_PORT=8000
+ENV APP_ENV=production
 
 # Run the backend server
-CMD ["python", "main.py", "--mode", "backend"]
+CMD ["python", "main.py", "--mode", "backend", "--no-reload"]

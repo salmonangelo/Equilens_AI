@@ -19,7 +19,7 @@ from collections.abc import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from config.settings import settings
 from backend.routes.health import router as health_router
@@ -171,17 +171,62 @@ async def ready_fallback():
 
 
 @app.get("/", tags=["Root"])
-async def root():
+async def root(request: Request):
     """Root endpoint with API information."""
+    docs_url = "/docs" if not settings.is_production else None
+    endpoints = {
+        "health": "GET /api/health",
+        "ready": "GET /api/ready",
+        "upload": "POST /api/v1/upload",
+        "analyze": "POST /api/v1/analyze",
+    }
+
+    if "text/html" in request.headers.get("accept", ""):
+        docs_link = f"<li><a href='{docs_url}'>API docs</a></li>" if docs_url else ""
+        endpoint_items = "".join(
+            f"<li><strong>{name}:</strong> {path}</li>" for name, path in endpoints.items()
+        )
+        return HTMLResponse(
+            content=f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{settings.APP_NAME}</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 40px; }}
+    .container {{ max-width: 720px; margin: auto; }}
+    a {{ color: #38bdf8; text-decoration: none; }}
+    .card {{ background: #1e293b; border-radius: 16px; padding: 24px; box-shadow: 0 16px 40px rgba(15, 23, 42, 0.35); }}
+    h1 {{ margin-top: 0; }}
+    ul {{ line-height: 1.7; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>{settings.APP_NAME}</h1>
+      <p>Version <strong>0.1.0</strong> — Environment: <strong>{settings.APP_ENV}</strong></p>
+      <p>Fairness & bias auditing backend API.</p>
+      <h2>Endpoints</h2>
+      <ul>
+        {endpoint_items}
+        {docs_link}
+      </ul>
+      <p>Use the API routes above to upload datasets and analyze fairness metrics.</p>
+    </div>
+  </div>
+</body>
+</html>
+""",
+            status_code=200,
+        )
+
     return {
         "name": settings.APP_NAME,
         "version": "0.1.0",
         "environment": settings.APP_ENV,
-        "docs_url": "/docs",
-        "endpoints": {
-            "health": "GET /api/health",
-            "ready": "GET /api/ready",
-            "upload": "POST /api/v1/upload",
-            "analyze": "POST /api/v1/analyze",
-        },
+        "docs_url": docs_url,
+        "endpoints": endpoints,
     }
