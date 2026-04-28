@@ -65,7 +65,7 @@ equilens-ai/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-org/equilens-ai.git
+git clone https://github.com/salmonangelo/equilens-ai.git
 cd equilens-ai
 ```
 
